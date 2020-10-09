@@ -1,0 +1,128 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- QA
+
+variables:
+  buildId: QA-$(Build.BuildNumber)
+  buildConfiguration: 'Release'
+  containerRegistry: 'qaacrpocrandd.azurecr.io'
+  imageRepository: 'pocrandd'
+  tag: $(Build.BuildNumber)
+jobs:
+- job: CR
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+    - task: Docker@2
+      inputs:
+        containerRegistry: 'qaacrpocrandd'
+        repository: '$(imageRepository)'
+        command: 'buildAndPush'
+        Dockerfile: 'src/Dockerfile'
+        tags: '$(tag)'
+
+    - publish: manifests
+      artifact: manifests
+
+- job: Ingress
+  dependsOn: CR
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: Kubernetes@1
+    displayName: 'Ingress Controller'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
+      command: 'apply'
+      arguments: '-f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml'
+      outputFormat: 'none'
+
+  - task: Kubernetes@1
+    displayName: 'Ingress Rules'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
+      command: 'apply'
+      arguments: '-f manifests/ingress-rules.yml'
+      outputFormat: 'none'
+  - task: Kubernetes@1
+    name: GetIngressIp
+    displayName: 'Get Ingress IP'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
+      namespace: 'default'
+      command: 'get'
+      arguments: 'ingress ingress-rules -o=jsonpath=''{@.status.loadBalancer.ingress[0].ip}'''
+      outputFormat: 'none'
+  - bash: echo '##vso[task.setvariable variable=ip;isOutput=true]$(GetIngressIp.KubectlOutput)'
+    name: IngressIp
+      
+- deployment: Service
+  pool:
+    vmImage: 'ubuntu-latest'
+  displayName: Service
+  dependsOn: Ingress
+  environment: 'qaakspocrandd.default'
+  strategy:
+    runOnce:
+      deploy:
+        steps:
+          - task: KubernetesManifest@0
+            displayName: Deploy to kubernetes cluster
+            inputs:
+              action: 'deploy'
+              manifests: '$(Pipeline.Workspace)/manifests/pocrandd.yml'
+              containers: '$(containerRegistry)/$(imageRepository):$(tag)'
+
+- job: SeleniumTests
+  pool:
+    vmImage: 'windows-2019'
+  dependsOn: 
+    - Service
+    - Ingress 
+  condition: succeeded()
+  variables:
+    UriAppPocRandD: $[format('http://{0}/', dependencies.Ingress.outputs['IngressIp.ip'])]
+  steps:
+  - script: dotnet build src --configuration $(buildConfiguration)
+    displayName: 'Build Tests Project'
+  - task: DotNetCoreCLI@2
+    inputs:
+      command: 'test'
+      projects: 'src/PocRandD.SeleniumTest/PocRandD.SeleniumTest.csproj'
+    displayName: 'FunctionalTests'
+  - task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact Selenium Results'    
+
+- job: JMeterTests
+  pool:
+    vmImage: ubuntu-latest
+  dependsOn: 
+    - SeleniumTests
+    - Ingress
+  variables:
+    hostJMeter: dependencies.Ingress.outputs['IngressIp.ip']
+  steps:
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+        KeyVaultName: 'keyvaultpocdevops'
+        SecretsFilter: 'SasContenedorReportesJMeterB64'
+        RunAsPreJob: true
+      displayName: 'Obtener SAS para reportes JMeter'
+    - task: Bash@3
+      displayName: Execute JMeter tests
+      inputs:
+        targetType: filePath
+        filePath: 'jmeter/test.sh'
+        arguments: '$PWD jmeterpocrandd.jmx $(hostJMeter) $(buildId)'
+        workingDirectory: jmeter
+        failOnStderr: false
+      env:
+          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB64)

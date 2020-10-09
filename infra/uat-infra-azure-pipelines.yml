@@ -1,0 +1,18 @@
+trigger:
+- release
+variables:
+  azureSubscription: 'dosppocrandd'
+  region: 'southcentralus'
+  environment: 'uat'
+  project: 'pocrandd'
+pool:
+  vmImage: 'windows-latest'
+
+steps:
+- task: AzureCLI@2
+  inputs:
+    azureSubscription: $(azureSubscription)
+    scriptType: 'ps'
+    scriptLocation: 'scriptPath'
+    scriptPath: 'infra/infrapocrandd.ps1'
+    arguments: '$(environment) $(project) $(region)'

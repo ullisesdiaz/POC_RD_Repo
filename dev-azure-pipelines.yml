@@ -1,0 +1,170 @@
+trigger:
+- develop
+
+variables:
+  buildConfiguration: 'Release'
+  region: 'southcentralus'
+  buildId: $(Build.BuildNumber)
+  buildIdHyphen: $[replace(variables['Build.BuildNumber'],'.','-')]
+  resourcesId: $(buildId)
+  resourceGroup: RG-$(resourcesId)
+  appServicePlan: SvcPlan-$(resourcesId)
+  UriAppPocRandD: $[format('https://appsvs-{0}.azurewebsites.net', replace(variables['Build.BuildNumber'],'.','-'))]
+  webAppName: $[format('appsvs-{0}', replace(variables['Build.BuildNumber'],'.','-'))]
+  hostJMeter: $[format('appsvs-{0}.azurewebsites.net', replace(variables['Build.BuildNumber'],'.','-'))]
+  fqdnContenedorReportes: 'https://resulttests.blob.core.windows.net/%24web'
+  uriReportesJMeter: 'https://resulttests.z21.web.core.windows.net/'
+  
+stages:
+- stage: Development
+  jobs:
+  - job: Build_UnitTests_And_Analysis
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureKeyVault@1
+      inputs:
+        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+        KeyVaultName: 'keyvaultpocdevops'
+        SecretsFilter: 'SonarToken'
+        RunAsPreJob: true
+      displayName: 'Obtener token para SonarCloud'
+    - script: dotnet build src --configuration $(buildConfiguration)
+      displayName: 'Build'
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: 'src/PocRandD.Test/PocRandD.Test.csproj'
+      displayName: 'Unit_Tests'
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: 'src/PocRandD.Test/PocRandD.Test.csproj'
+        arguments: '--collect:"XPlat Code Coverage" --results-directory:"src/PocRandD.Test/TestResults"'
+        workingDirectory: "./"
+        publishTestResults: false
+      displayName: 'Collect Coverage for Unit Tests'
+    - task: PublishCodeCoverageResults@1
+      inputs:
+        codeCoverageTool: 'cobertura'
+        summaryFileLocation: 'src/PocRandD.Test/TestResults/**/coverage.cobertura.xml'
+        pathToSources: 'src'
+      displayName: 'Publish Coverage Results'
+    - task: Bash@3
+      inputs:
+        targetType: filePath
+        filePath: 'sonarcloud/run.sh'
+        arguments: '$(buildId)'
+        workingDirectory: './'
+        failOnStderr: true
+      env:
+          SONARTOKEN: $(SonarToken)
+      displayName: 'Static_Analysis'
+  - job: Deploy_to_Web_App_Dev
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: 'az group create --name $(resourceGroup) --location $(region)'
+      displayName: 'Create Resource Group'
+    - task: AzureResourceManagerTemplateDeployment@3
+      inputs:
+        deploymentScope: 'Resource Group'
+        azureResourceManagerConnection: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+        action: 'Create Or Update Resource Group'
+        resourceGroupName: '$(resourceGroup)'
+        location: '$(region)'
+        templateLocation: 'Linked artifact'
+        csmFile: 'infra/Templates/Web App/template.json'
+        csmParametersFile: 'infra/Templates/Web App/parameters.json'
+        overrideParameters: '-serverFarmResourceGroup $(resourceGroup) -hostingPlanName $(appServicePlan) -name AppSvs-$(buildIdHyphen)'
+        deploymentMode: 'Incremental'
+      displayName: 'Create App Service Plan'
+    - task: Bash@3
+      displayName: 'Esperar respuesta de App aprovisionada'
+      inputs:
+        targetType: filePath
+        filePath: 'infra/waitForApp.sh'
+        arguments: '$(UriAppPocRandD)'
+        workingDirectory: infra
+        failOnStderr: false
+    - task: DotNetCoreCLI@2
+      displayName: 'Create the Publish'
+      inputs:
+        command: publish
+        publishWebProjects: false
+        projects: 'src/PocRandD/PocRandD.csproj'
+        arguments: '--configuration $(buildConfiguration) --output $(Build.ArtifactStagingDirectory)'
+        zipAfterPublish: true
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact'
+      condition: succeededOrFailed()
+    - task: AzureRmWebAppDeployment@4
+      displayName: 'Deploy to Azure AppService'
+      inputs:
+        ConnectionType: 'AzureRM'
+        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+        appType: 'webAppLinux'
+        WebAppName: '$(webAppName)'
+        packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
+        RuntimeStack: 'DOTNETCORE|3.1'
+    - task: Bash@3
+      displayName: 'Esperar respuesta de App publicada'
+      inputs:
+        targetType: filePath
+        filePath: 'infra/waitForApp.sh'
+        arguments: '$(UriAppPocRandD)'
+        workingDirectory: infra
+        failOnStderr: false
+    dependsOn: Build_UnitTests_And_Analysis
+    condition: succeeded()
+  - job: SeleniumTests
+    pool:
+      vmImage: 'windows-2019'
+    steps:
+    - script: dotnet build src --configuration $(buildConfiguration)
+      displayName: 'Build Tests Project'
+    - task: DotNetCoreCLI@2
+      inputs:
+        command: 'test'
+        projects: 'src/PocRandD.SeleniumTest/PocRandD.SeleniumTest.csproj'
+      displayName: 'FunctionalTests'
+    - task: PublishBuildArtifacts@1
+      displayName: 'Publish Artifact Selenium Results'    
+    dependsOn: Deploy_to_Web_App_Dev
+    condition: succeeded()
+  - job: JMeterTests
+    pool:
+      vmImage: ubuntu-latest
+    dependsOn: SeleniumTests
+    steps:
+      - task: AzureKeyVault@1
+        inputs:
+          azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+          KeyVaultName: 'keyvaultpocdevops'
+          SecretsFilter: 'SasContenedorReportesJMeterB64'
+          RunAsPreJob: true
+        displayName: 'Obtener SAS para reportes JMeter'
+      - task: Bash@3
+        displayName: Execute JMeter tests
+        inputs:
+          targetType: filePath
+          filePath: 'jmeter/test.sh'
+          arguments: '$PWD jmeterpocrandd.jmx $(hostJMeter) $(buildId) $(fqdnContenedorReportes)'
+          workingDirectory: jmeter
+          failOnStderr: false
+        env:
+          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB64)
+      - task: AzureCLI@2
+        displayName: 'Deleting Resource Group'
+        inputs:
+          azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
+          scriptType: 'bash'
+          scriptLocation: 'inlineScript'
+          inlineScript: 'az group delete --name ''$(resourceGroup)'' --yes'
+          addSpnToEnvironment: true
+          useGlobalConfig: true        

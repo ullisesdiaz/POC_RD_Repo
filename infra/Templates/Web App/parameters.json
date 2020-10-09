@@ -1,0 +1,42 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subscriptionId": {
+            "value": "d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90"
+        },
+        "name": {
+            "value": null
+        },
+        "location": {
+            "value": "South Central US"
+        },
+        "hostingPlanName": {
+            "value": null
+        },
+        "serverFarmResourceGroup": {
+            "value": null
+        },
+        "alwaysOn": {
+            "value": false
+        },
+        "sku": {
+            "value": "Basic"
+        },
+        "skuCode": {
+            "value": "B1"
+        },
+        "workerSize": {
+            "value": "0"
+        },
+        "workerSizeId": {
+            "value": "0"
+        },
+        "numberOfWorkers": {
+            "value": "1"
+        },
+        "linuxFxVersion": {
+            "value": "DOTNETCORE|3.1"
+        }
+    }
+}
