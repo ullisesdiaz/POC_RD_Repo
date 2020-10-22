@@ -24,11 +24,11 @@ stages:
     steps:
     - task: AzureKeyVault@1
       inputs:
-        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
-        KeyVaultName: 'keyvaultpocdevops'
-        SecretsFilter: 'SonarToken'
+        azureSubscription: 'Visual Studio Ultimate con MSDN(0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        KeyVaultName: 'keyvaultpocmigrated'
+        SecretsFilter: 'SONARTOKEN'
         RunAsPreJob: true
-      displayName: 'Obtener token para SonarCloud'
+      displayName: 'Obtener token para SonarCloud Migracion'
     - script: dotnet build src --configuration $(buildConfiguration)
       displayName: 'Build'
     - task: DotNetCoreCLI@2
@@ -58,7 +58,7 @@ stages:
         workingDirectory: './'
         failOnStderr: true
       env:
-          SONARTOKEN: $(SonarToken)
+          SONARTOKEN: $(SONARTOKEN)
       displayName: 'Static_Analysis'
   - job: Deploy_to_Web_App_Dev
     pool:
