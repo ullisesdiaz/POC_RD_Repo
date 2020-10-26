@@ -111,9 +111,9 @@ jobs:
   steps:
     - task: AzureKeyVault@1
       inputs:
-        azureSubscription: 'Free Trial(d6c2c6fa-eaa9-4d22-bd11-da6eacb13f90)'
-        KeyVaultName: 'keyvaultpocdevops'
-        SecretsFilter: 'SasContenedorReportesJMeterB64'
+        azureSubscription: 'Visual Studio Ultimate con MSDN(0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        KeyVaultName: 'keyvaultpocmigrated'
+        SecretsFilter: 'SONARTOKEN'
         RunAsPreJob: true
       displayName: 'Obtener SAS para reportes JMeter'
     - task: Bash@3
