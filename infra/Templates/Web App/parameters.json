@@ -3,7 +3,7 @@
     "contentVersion": "1.0.0.0",
     "parameters": {
         "subscriptionId": {
-            "value": "0f0e2239-98a5-4848-a465-7fc00478f38f"
+            "value": "POC_DEVMIG_SP"
         },
         "name": {
             "value": null
