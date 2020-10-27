@@ -74,7 +74,9 @@ stages:
     - task: AzureResourceManagerTemplateDeployment@3
       inputs:
         deploymentScope: 'Resource Group'
-        azureResourceManagerConnection: '0f0e2239-98a5-4848-a465-7fc00478f38f'
+        #azureResourceManagerConnection: '0f0e2239-98a5-4848-a465-7fc00478f38f'
+        ConnectedServiceName: 'AzureRmPipeline-conn'
+        subscriptionId: '0f0e2239-98a5-4848-a465-7fc00478f38f'
         action: 'Create Or Update Resource Group'
         resourceGroupName: '$(resourceGroup)'
         location: '$(region)'
