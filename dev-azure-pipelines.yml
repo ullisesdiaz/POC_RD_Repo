@@ -24,7 +24,7 @@ stages:
     steps:
     - task: AzureKeyVault@1
       inputs:
-        azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        azureSubscription: '0f0e2239-98a5-4848-a465-7fc00478f38f'
         KeyVaultName: 'keyvaultpocmigrated'
         SecretsFilter: 'SONARTOKEN'
         RunAsPreJob: true
@@ -66,7 +66,7 @@ stages:
     steps:
     - task: AzureCLI@2
       inputs:
-        azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        azureSubscription: '0f0e2239-98a5-4848-a465-7fc00478f38f'
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: 'az group create --name $(resourceGroup) --location $(region)'
@@ -74,7 +74,7 @@ stages:
     - task: AzureResourceManagerTemplateDeployment@3
       inputs:
         deploymentScope: 'Resource Group'
-        azureResourceManagerConnection: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        azureResourceManagerConnection: '0f0e2239-98a5-4848-a465-7fc00478f38f'
         action: 'Create Or Update Resource Group'
         resourceGroupName: '$(resourceGroup)'
         location: '$(region)'
@@ -107,7 +107,7 @@ stages:
       displayName: 'Deploy to Azure AppService'
       inputs:
         ConnectionType: 'AzureRM'
-        azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        azureSubscription: '0f0e2239-98a5-4848-a465-7fc00478f38f'
         appType: 'webAppLinux'
         WebAppName: '$(webAppName)'
         packageForLinux: '$(Build.ArtifactStagingDirectory)/**/*.zip'
@@ -144,7 +144,7 @@ stages:
     steps:
       - task: AzureKeyVault@1
         inputs:
-          azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+          azureSubscription: '0f0e2239-98a5-4848-a465-7fc00478f38f'
           KeyVaultName: 'keyvaultpocmigrated'
           SecretsFilter: 'SasContenedorReportesJMeterB64'
           RunAsPreJob: true
@@ -162,7 +162,7 @@ stages:
       - task: AzureCLI@2
         displayName: 'Deleting Resource Group'
         inputs:
-          azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+          azureSubscription: '0f0e2239-98a5-4848-a465-7fc00478f38f'
           scriptType: 'bash'
           scriptLocation: 'inlineScript'
           inlineScript: 'az group delete --name ''$(resourceGroup)'' --yes'
