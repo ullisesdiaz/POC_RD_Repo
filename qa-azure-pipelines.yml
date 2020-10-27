@@ -111,7 +111,7 @@ jobs:
   steps:
     - task: AzureKeyVault@1
       inputs:
-        azureSubscription: 'Visual Studio Ultimate con MSDN (0f0e2239-98a5-4848-a465-7fc00478f38f)'
+        azureSubscription: 'POC_DEVMIG_SP'
         KeyVaultName: 'keyvaultpocmigrated'
         SecretsFilter: 'SONARTOKEN'
         RunAsPreJob: true
