@@ -13,7 +13,7 @@ variables:
   webAppName: $[format('appsvs-{0}', replace(variables['Build.BuildNumber'],'.','-'))]
   hostJMeter: $[format('appsvs-{0}.azurewebsites.net', replace(variables['Build.BuildNumber'],'.','-'))]
   fqdnContenedorReportes: 'https://resulttests.blob.core.windows.net/%24web'
-  uriReportesJMeter: 'https://resulttests.z21.web.core.windows.net/'
+  uriReportesJMeter: 'https://resulttest.z13.web.core.windows.net/'
   
 stages:
 - stage: Development
