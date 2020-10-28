@@ -1,7 +1,7 @@
 trigger:
 - release
 variables:
-  azureSubscription: 'dosppocrandd'
+  azureSubscription: 'POC_DEVMIG_SP'
   region: 'southcentralus'
   environment: 'uat'
   project: 'pocrandd'
