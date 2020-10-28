@@ -147,7 +147,7 @@ stages:
         inputs:
           azureSubscription: 'POC_DEVMIG_SP'
           KeyVaultName: 'keyvaultpocmigrated'
-          SecretsFilter: 'SasContenedorReportesJMeterB64'
+          SecretsFilter: 'SasContenedorReportesJMeterB65'
           RunAsPreJob: true
         displayName: 'Obtener SAS para reportes JMeter'
       - task: Bash@3
@@ -159,7 +159,7 @@ stages:
           workingDirectory: jmeter
           failOnStderr: false
         env:
-          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB64)
+          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB65)
       - task: AzureCLI@2
         displayName: 'Deleting Resource Group'
         inputs:
