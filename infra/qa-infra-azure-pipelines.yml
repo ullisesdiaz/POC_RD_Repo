@@ -1,7 +1,7 @@
 trigger:
 - QA/infra
 variables:
-  azureSubscription: 'dosppocrandd'
+  azureSubscription: 'POC_DEVMIG_SP'
   region: 'southcentralus'
   environment: 'qa'
   project: 'pocrandd'
