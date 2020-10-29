@@ -11,13 +11,13 @@ variables:
   buildConfiguration: 'Release'
   tag: $(Build.BuildNumber)
   buildId: qa-$(Build.BuildNumber)
-  containerRegistry: 'qaacrpocrandd.azurecr.io'
-  acrConnection: 'qaacrpocrandd'
+  containerRegistry: 'qaacrpocrandd01.azurecr.io'
+  acrConnection: 'qaacrpocrandd01'
   imageRepository: 'pocrandd'
-  aksConnection: 'qaakspocrandd-default-admin'
+  aksConnection: 'qaakspocrandd01-default-admin'
   aksName: 'qaakspocrandd01'
   environment: 'qaakspocrandd01.default'
-  rgpName: 'qargppocrandd'
+  rgpName: 'qargppocrandd01'
   deploymentYml: 'qa-pocrandd.yml' 
 jobs:
 - job: CR
