@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: pocrandd
-        image: qaacrpocrandd.azurecr.io/pocrandd:v1
+        image: qaacrpocrandd01.azurecr.io/pocrandd:v1
         resources:
           limits:
             memory: "128Mi"
