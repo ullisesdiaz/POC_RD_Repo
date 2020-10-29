@@ -128,7 +128,7 @@ jobs:
       inputs:
         azureSubscription: $(azConnection)
         KeyVaultName: 'keyvaultpocdevops'
-        SecretsFilter: 'SasContenedorReportesJMeterB64'
+        SecretsFilter: 'SasContenedorReportesJMeterB66'
         RunAsPreJob: true
       displayName: 'Obtener SAS para reportes JMeter'
     - task: Bash@3
