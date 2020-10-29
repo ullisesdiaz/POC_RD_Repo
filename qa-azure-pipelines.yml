@@ -19,7 +19,7 @@ jobs:
   steps:
     - task: Docker@2
       inputs:
-        containerRegistry: 'qaacrpocrandd'
+        containerRegistry: 'qaacrpocrandd01'
         repository: '$(imageRepository)'
         command: 'buildAndPush'
         Dockerfile: 'src/Dockerfile'
