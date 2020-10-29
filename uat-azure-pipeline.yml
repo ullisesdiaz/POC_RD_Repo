@@ -127,7 +127,7 @@ jobs:
     - task: AzureKeyVault@1
       inputs:
         azureSubscription: $(azConnection)
-        KeyVaultName: 'keyvaultpocdevops'
+        KeyVaultName: 'keyvaultpocmigrated'
         SecretsFilter: 'SasContenedorReportesJMeterB66'
         RunAsPreJob: true
       displayName: 'Obtener SAS para reportes JMeter'
