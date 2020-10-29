@@ -128,7 +128,7 @@ jobs:
       inputs:
         azureSubscription: $(azConnection)
         KeyVaultName: 'keyvaultpocmigrated'
-        SecretsFilter: 'SasContenedorReportesJMeterB66'
+        SecretsFilter: 'SasContenedorReportesJMeterB67'
         RunAsPreJob: true
       displayName: 'Obtener SAS para reportes JMeter'
     - task: Bash@3
@@ -140,4 +140,4 @@ jobs:
         workingDirectory: jmeter
         failOnStderr: false
       env:
-          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB66)
+          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB67)
