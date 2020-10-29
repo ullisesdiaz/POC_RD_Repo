@@ -4,14 +4,21 @@
 # https://aka.ms/yaml
 
 trigger:
-- QA
+- release
 
 variables:
-  buildId: QA-$(Build.BuildNumber)
+  azConnection: 'POC_DEVMIG_SP'
   buildConfiguration: 'Release'
-  containerRegistry: 'qaacrpocrandd.azurecr.io'
-  imageRepository: 'pocrandd'
   tag: $(Build.BuildNumber)
+  buildId: qa-$(Build.BuildNumber)
+  containerRegistry: 'qaacrpocrandd.azurecr.io'
+  acrConnection: 'qaacrpocrandd'
+  imageRepository: 'pocrandd'
+  aksConnection: 'qaakspocrandd-default-admin'
+  aksName: 'qaakspocrandd'
+  environment: 'qaakspocrandd.default'
+  rgpName: 'qargppocrandd'
+  deploymentYml: 'qa-pocrandd.yml' 
 jobs:
 - job: CR
   pool:
@@ -19,7 +26,7 @@ jobs:
   steps:
     - task: Docker@2
       inputs:
-        containerRegistry: 'qaacrpocrandd01'
+        containerRegistry: $(acrConnection)
         repository: '$(imageRepository)'
         command: 'buildAndPush'
         Dockerfile: 'src/Dockerfile'
@@ -28,47 +35,12 @@ jobs:
     - publish: manifests
       artifact: manifests
 
-- job: Ingress
-  dependsOn: CR
-  pool:
-    vmImage: 'ubuntu-latest'
-  steps:
-  - task: Kubernetes@1
-    displayName: 'Ingress Controller'
-    inputs:
-      connectionType: 'Kubernetes Service Connection'
-      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
-      command: 'apply'
-      arguments: '-f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml'
-      outputFormat: 'none'
-
-  - task: Kubernetes@1
-    displayName: 'Ingress Rules'
-    inputs:
-      connectionType: 'Kubernetes Service Connection'
-      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
-      command: 'apply'
-      arguments: '-f manifests/ingress-rules.yml'
-      outputFormat: 'none'
-  - task: Kubernetes@1
-    name: GetIngressIp
-    displayName: 'Get Ingress IP'
-    inputs:
-      connectionType: 'Kubernetes Service Connection'
-      kubernetesServiceEndpoint: 'qaakspocrandd-default-admin'
-      namespace: 'default'
-      command: 'get'
-      arguments: 'ingress ingress-rules -o=jsonpath=''{@.status.loadBalancer.ingress[0].ip}'''
-      outputFormat: 'none'
-  - bash: echo '##vso[task.setvariable variable=ip;isOutput=true]$(GetIngressIp.KubectlOutput)'
-    name: IngressIp
-      
 - deployment: Service
   pool:
     vmImage: 'ubuntu-latest'
   displayName: Service
-  dependsOn: Ingress
-  environment: 'qaakspocrandd.default'
+  dependsOn: CR
+  environment: $(environment)
   strategy:
     runOnce:
       deploy:
@@ -77,8 +49,51 @@ jobs:
             displayName: Deploy to kubernetes cluster
             inputs:
               action: 'deploy'
-              manifests: '$(Pipeline.Workspace)/manifests/pocrandd.yml'
+              manifests: '$(Pipeline.Workspace)/manifests/$(deploymentYml)'
               containers: '$(containerRegistry)/$(imageRepository):$(tag)'
+- job: Ingress
+  dependsOn: Service
+  pool:
+    vmImage: 'ubuntu-latest'
+  steps:
+  - task: Kubernetes@1
+    displayName: 'Ingress Controller'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: $(aksConnection)
+      command: 'apply'
+      arguments: '-f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/cloud/deploy.yaml'
+      outputFormat: 'none'
+  
+  - task: Kubernetes@1
+    displayName: 'Ingress Rules'
+    inputs:
+      connectionType: 'Kubernetes Service Connection'
+      kubernetesServiceEndpoint: $(aksConnection)
+      command: 'apply'
+      arguments: '-f manifests/ingress-rules.yml'
+      outputFormat: 'none'
+  
+  - task: AzureCLI@1
+    name: IngressIp
+    displayName: Wait for IP
+    inputs:
+      azureSubscription: '$(azConnection)'
+      scriptLocation: 'inlineScript'
+      inlineScript: |
+        az aks get-credentials -g $(rgpName) -n $(aksName)
+        while true
+        do
+          export IP=$(kubectl get ingress ingress-rules -o=jsonpath=''{@.status.loadBalancer.ingress[0].ip}'')
+          if [[ -n $IP && $IP != "''''" ]]; then
+            echo "Ingress ip is $IP"
+            echo "##vso[task.setvariable variable=ip;isOutput=true]$IP"
+            break
+          else
+            echo "IP no disponible :S"
+          fi
+          sleep 5
+        done
 
 - job: SeleniumTests
   pool:
@@ -111,9 +126,9 @@ jobs:
   steps:
     - task: AzureKeyVault@1
       inputs:
-        azureSubscription: 'POC_DEVMIG_SP'
-        KeyVaultName: 'keyvaultpocmigrated'
-        SecretsFilter: 'SONARTOKEN'
+        azureSubscription: $(azConnection)
+        KeyVaultName: 'keyvaultpocdevops'
+        SecretsFilter: 'SasContenedorReportesJMeterB66'
         RunAsPreJob: true
       displayName: 'Obtener SAS para reportes JMeter'
     - task: Bash@3
@@ -125,4 +140,4 @@ jobs:
         workingDirectory: jmeter
         failOnStderr: false
       env:
-          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB66)
+          SAS_CONTENEDOR_REPORTESB64: $(SasContenedorReportesJMeterB64)
