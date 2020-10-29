@@ -15,8 +15,8 @@ variables:
   acrConnection: 'qaacrpocrandd'
   imageRepository: 'pocrandd'
   aksConnection: 'qaakspocrandd-default-admin'
-  aksName: 'qaakspocrandd'
-  environment: 'qaakspocrandd.default'
+  aksName: 'qaakspocrandd01'
+  environment: 'qaakspocrandd01.default'
   rgpName: 'qargppocrandd'
   deploymentYml: 'qa-pocrandd.yml' 
 jobs:
